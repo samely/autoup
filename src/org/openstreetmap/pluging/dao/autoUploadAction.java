@@ -43,10 +43,9 @@ public class autoUploadAction extends JosmAction{
   
     private static final List<UploadHook> uploadHooks = new LinkedList<UploadHook>();
     private static final List<UploadHook> lateUploadHooks = new LinkedList<UploadHook>();
+    
     static {
-        /**
-         * Calls validator before upload.
-         */
+       
         uploadHooks.add(new ValidateUploadHook());
 
         /**
@@ -216,6 +215,7 @@ public class autoUploadAction extends JosmAction{
             @Override
             public void run() {
                 dialog.setDefaultChangesetTags(layer.data.getChangeSetTags());
+                
             }
         });
         dialog.setUploadedPrimitives(apiData);
@@ -252,6 +252,8 @@ public class autoUploadAction extends JosmAction{
             );
             return;
         }
+        
+        
         APIDataSet apiData = new APIDataSet(Main.main.getCurrentDataSet());
         uploadData(Main.main.getEditLayer(), apiData);      
        

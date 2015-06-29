@@ -1,14 +1,11 @@
 package org.openstreetmap.pluging.main;
 
 import java.awt.Dimension;
-import java.awt.GridLayout;
-import java.awt.TextField;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import javax.swing.AbstractAction;
 import static javax.swing.Action.NAME;
 import static javax.swing.Action.SHORT_DESCRIPTION;
@@ -17,20 +14,19 @@ import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
-import javax.swing.RowFilter.Entry;
-import javax.swing.SwingUtilities;
 import org.openstreetmap.josm.Main;
-import org.openstreetmap.josm.actions.upload.UploadHook;
 import org.openstreetmap.josm.data.APIDataSet;
+import org.openstreetmap.josm.data.osm.IPrimitive;
 import org.openstreetmap.josm.gui.SideButton;
 import org.openstreetmap.josm.gui.dialogs.ToggleDialog;
-import org.openstreetmap.josm.gui.io.ChangesetCommentModel;
-import org.openstreetmap.josm.gui.io.UploadDialog;
-import org.openstreetmap.josm.gui.io.UploadPrimitivesTask;
+
 import static org.openstreetmap.josm.gui.mappaint.mapcss.ExpressionFactory.Functions.tr;
-import static org.openstreetmap.josm.tools.I18n.tr;
 import org.openstreetmap.josm.tools.ImageProvider;
 import org.openstreetmap.josm.tools.Shortcut;
+import org.openstreetmap.pluging.dao.BasicUploadSettingsPanel;
+import org.openstreetmap.pluging.dao.UploadDialog;
+import org.openstreetmap.pluging.dao.UploadPrimitivesTask;
+
 import org.openstreetmap.pluging.dao.autoUploadAction;
 
 /**
@@ -40,12 +36,23 @@ import org.openstreetmap.pluging.dao.autoUploadAction;
 public class autoUploadDialog extends ToggleDialog implements ActionListener {
 
     JPanel jpComment = new JPanel();
+    JPanel jpSource = new JPanel();
     JPanel jpCheckBox = new JPanel();
     private final SideButton sbSkip;
     private final JTextField txfComment;
+    private final JTextField txfSource;
     private final JCheckBox jchb1, jchb5, jchb10;
     private autoUploadAction aua;
+    private BasicUploadSettingsPanel busp = new BasicUploadSettingsPanel();
 
+    public String getComment() {
+        return txfComment.getText();
+    }
+
+    public String getSource() {
+        return txfSource.getText();
+    }
+   
     public autoUploadDialog() {
         super("Auto Uploading", "up", tr("Open Auto-Uploading."), Shortcut.registerShortcut("tool:autoUpload", tr("Toggle: {0}", tr("Auto Uploading")),
                 KeyEvent.VK_F, Shortcut.CTRL_SHIFT), 75);
@@ -66,6 +73,9 @@ public class autoUploadDialog extends ToggleDialog implements ActionListener {
         txfComment = new JTextField();
         txfComment.setText("Here's the comment of the uploading");
 
+        txfSource = new JTextField();
+        txfSource.setText("Here's the source of the uploading");
+       
         jchb1 = new JCheckBox(new AbstractAction() {
             {
                 putValue(NAME, tr("1 min."));
@@ -83,15 +93,30 @@ public class autoUploadDialog extends ToggleDialog implements ActionListener {
         });
 
         jchb5 = new JCheckBox(new AbstractAction() {
+
             {
                 putValue(NAME, tr("5 min."));
                 putValue(SHORT_DESCRIPTION, tr("Upload editions every 5 minutes."));
+               
             }
+            private Set<IPrimitive> processedPrimitives = new HashSet<IPrimitive>();
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (jchb1.isSelected()) {
+                if (jchb5.isSelected()) {
+                     busp.enviar(getComment(), getSource());
                     APIDataSet apiData = new APIDataSet(Main.main.getCurrentDataSet());
+                    
+                    System.out.println("Esto son los datos en autouploaddialog:" + getComment() + getSource());
+                   
+                    Main.worker.execute(
+                            new UploadPrimitivesTask(
+                                    UploadDialog.getUploadDialog(getComment(), getSource()).getUploadStrategySpecification(),
+                                    Main.main.getEditLayer(),
+                                    apiData,
+                                    UploadDialog.getUploadDialog(getComment(), getSource()).getChangeset()
+                            )
+                    );
 
                 }
             }
@@ -107,14 +132,16 @@ public class autoUploadDialog extends ToggleDialog implements ActionListener {
             public void actionPerformed(ActionEvent e) {
                 aua = new autoUploadAction();
                 aua.actionPerformed(e);
-                
+
             }
 
         });
 
         this.setPreferredSize(
                 new Dimension(0, 40));
+        jpSource.add(txfSource);
         jpComment.add(txfComment);
+        jpComment.add(jpSource);
 
         jpComment.add(jpCheckBox);
 
@@ -124,8 +151,7 @@ public class autoUploadDialog extends ToggleDialog implements ActionListener {
 
         jpCheckBox.add(jchb10);
 
-        createLayout(jpComment,
-                false, null);
+        createLayout(jpComment, false, null);
     }
 
     @Override
