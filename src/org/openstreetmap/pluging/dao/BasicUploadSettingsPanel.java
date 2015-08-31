@@ -62,39 +62,36 @@ public class BasicUploadSettingsPanel extends JPanel {
     private final ChangesetCommentModel changesetSourceModel;
     private String jtfComment;
     private String jtfSource;
-    public String a;
-    public String b;
-    
+    UploadedObjectsSummaryPanel uosp = new UploadedObjectsSummaryPanel();
 
-    public BasicUploadSettingsPanel() {
-        this.changesetCommentModel = null;
-        this.changesetSourceModel = null;
-    }
-
-    public void enviar(String c, String s) {
-        jtfComment = c;
-        jtfSource = s;
-        a = c;
-        b = s;
-        System.out.println("Nuevo metodo" + jtfComment + jtfSource+a+b);
-
-    }
-    
-
+//    public BasicUploadSettingsPanel() {
+//        this.changesetCommentModel = null;
+//        this.changesetSourceModel = null;
+//    }
+//    public void enviar(String c, String s) {
+//        jtfComment = c;
+//        jtfSource = s;
+//
+//        System.out.println("Nuevo metodo" + jtfComment + jtfSource);
+//    }
     protected JPanel buildUploadCommentPanel() {
         JPanel pnl = new JPanel();
         pnl.setLayout(new GridBagLayout());
-        System.out.println("Esto se recibe en la clase basicuploadsettingspanel inicio:" + a + b+jtfComment+jtfSource);
-
+        System.out.println("Esto se recibe en la clase basicuploadsettingspanel inicio:" + jtfComment + jtfSource);
+        //hcbUploadComment es el historybox
         pnl.add(new JLabel(tr("Provide a brief comment for the changes you are uploading:")), GBC.eol().insets(0, 5, 10, 3));
         hcbUploadComment.setToolTipText(tr("Enter an upload comment"));
         hcbUploadComment.setMaxTextLength(Changeset.MAX_CHANGESET_TAG_LENGTH);
         List<String> cmtHistory = new LinkedList<String>(Main.pref.getCollection(HISTORY_KEY, new LinkedList<String>()));
         Collections.reverse(cmtHistory); // we have to reverse the history, because ComboBoxHistory will reverse it again in addElement()
         hcbUploadComment.setPossibleItems(cmtHistory);
-        final CommentModelListener commentModelListener = new CommentModelListener(a, hcbUploadComment, changesetCommentModel);
+        final CommentModelListener commentModelListener = new CommentModelListener(jtfComment, hcbUploadComment, changesetCommentModel);
+        commentModelListener.source.setText(jtfComment);
+        commentModelListener.destination.setComment(jtfComment);
         hcbUploadComment.getEditor().addActionListener(commentModelListener);
         hcbUploadComment.getEditor().getEditorComponent().addFocusListener(commentModelListener);
+
+        hcbUploadComment.setText(jtfComment);
         pnl.add(hcbUploadComment, GBC.eol().fill(GBC.HORIZONTAL));
 
         pnl.add(new JLabel(tr("Specify the data source for the changes:")), GBC.eol().insets(0, 8, 10, 3));
@@ -102,14 +99,19 @@ public class BasicUploadSettingsPanel extends JPanel {
         List<String> sourceHistory = new LinkedList<String>(Main.pref.getCollection(SOURCE_HISTORY_KEY, new LinkedList<String>()));
         Collections.reverse(sourceHistory); // we have to reverse the history, because ComboBoxHistory will reverse it again in addElement()
         hcbUploadSource.setPossibleItems(sourceHistory);
-        final CommentModelListener sourceModelListener = new CommentModelListener(b, hcbUploadSource, changesetSourceModel);
+        final CommentModelListener sourceModelListener = new CommentModelListener(jtfSource, hcbUploadSource, changesetSourceModel);
+        commentModelListener.source.setText(jtfComment);
+        sourceModelListener.destination.setComment(jtfSource);
         hcbUploadSource.getEditor().addActionListener(sourceModelListener);
         hcbUploadSource.getEditor().getEditorComponent().addFocusListener(sourceModelListener);
+        hcbUploadSource.setText(jtfSource);
         pnl.add(hcbUploadSource, GBC.eol().fill(GBC.HORIZONTAL));
 
-        System.out.println("Esto se recibe en la clase basicuploadsettingspanel:" + a + b);
-
+        System.out.println("Esto se recibe en la clase basicuploadsettingspanel:" + jtfComment + jtfSource);
+        System.out.println("***********************************************");
+        System.out.println("Esto es la cantidad de agregads-modificados" + " "+uosp.AddN()+"-"+uosp.ModifiedN());
         return pnl;
+
     }
 
     protected void build() {
@@ -136,8 +138,8 @@ public class BasicUploadSettingsPanel extends JPanel {
         CheckParameterUtil.ensureParameterNotNull(changesetSourceModel, "changesetSourceModel");
         this.changesetCommentModel = changesetCommentModel;
         this.changesetSourceModel = changesetSourceModel;
-//        this.jtfComment = jtfComment;
-//        this.jtfSource = jtfSource;
+        this.jtfComment = jtfComment;
+        this.jtfSource = jtfSource;
         changesetCommentModel.addObserver(new ChangesetCommentObserver(hcbUploadComment));
         changesetSourceModel.addObserver(new ChangesetCommentObserver(hcbUploadSource));
         build();
@@ -182,7 +184,9 @@ public class BasicUploadSettingsPanel extends JPanel {
         Main.pref.putInteger(HISTORY_LAST_USED_KEY, (int) (System.currentTimeMillis() / 1000));
         // store the history of sources
         hcbUploadSource.addCurrentItemToHistory();
+        hcbUploadComment.setText(jtfComment);
         Main.pref.putCollection(SOURCE_HISTORY_KEY, hcbUploadSource.getHistory());
+
     }
 
     /**
@@ -193,15 +197,19 @@ public class BasicUploadSettingsPanel extends JPanel {
         int age = (int) (System.currentTimeMillis() / 1000 - Main.pref.getInteger(HISTORY_LAST_USED_KEY, 0));
         // only pre-select latest entry if used less than 4 hours ago.
         if (age < 4 * 3600 * 1000 && history != null && !history.isEmpty()) {
+            history.set(0, jtfComment);
             hcbUploadComment.setText(history.get(0));
         }
         hcbUploadComment.requestFocusInWindow();
         hcbUploadComment.getEditor().getEditorComponent().requestFocusInWindow();
+        hcbUploadComment.setText(jtfComment);
     }
 
     public void initEditingOfUploadComment() {
         hcbUploadComment.getEditor().selectAll();
         hcbUploadComment.requestFocusInWindow();
+        hcbUploadComment.setText(jtfComment);
+        System.out.println("En initeditingofuploadomment" + jtfComment);
     }
 
     public UploadParameterSummaryPanel getUploadParameterSummaryPanel() {
@@ -221,6 +229,8 @@ public class BasicUploadSettingsPanel extends JPanel {
             this.source = source;
             this.jtf = jtf;
             this.destination = destination;
+            source.setText(jtf);
+            destination.setComment(jtf);
             System.out.println("Esto es el codigo" + destination.getComment().trim());
             System.out.println("Esto es el string" + jtf);
 
@@ -229,13 +239,14 @@ public class BasicUploadSettingsPanel extends JPanel {
         @Override
         public void actionPerformed(ActionEvent e) {
             //destination.setComment(source.getText());
-            destination.setComment(jtf);
+            destination.setComment(source.getText());
+            System.out.println("Este es el comentario final (destnation) en basicupla..." + destination.getComment());
         }
 
         @Override
         public void focusLost(FocusEvent e) {
             //destination.setComment(source.getText());
-            destination.setComment(jtf);
+            destination.setComment(source.getText());
         }
     }
 
@@ -244,7 +255,7 @@ public class BasicUploadSettingsPanel extends JPanel {
      * sync with the current changeset comment
      */
     class ChangesetCommentObserver implements Observer {
-
+        
         private final HistoryComboBox destination;
 
         ChangesetCommentObserver(HistoryComboBox destination) {
@@ -260,6 +271,7 @@ public class BasicUploadSettingsPanel extends JPanel {
             if (!destination.getText().equals(newComment)) {
                 destination.setText(newComment);
             }
+            
         }
     }
 }

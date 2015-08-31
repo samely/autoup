@@ -19,6 +19,7 @@ import org.openstreetmap.josm.data.APIDataSet;
 import org.openstreetmap.josm.data.osm.IPrimitive;
 import org.openstreetmap.josm.gui.SideButton;
 import org.openstreetmap.josm.gui.dialogs.ToggleDialog;
+import org.openstreetmap.josm.gui.layer.ImageryLayer;
 
 import static org.openstreetmap.josm.gui.mappaint.mapcss.ExpressionFactory.Functions.tr;
 import org.openstreetmap.josm.tools.ImageProvider;
@@ -43,7 +44,9 @@ public class autoUploadDialog extends ToggleDialog implements ActionListener {
     private final JTextField txfSource;
     private final JCheckBox jchb1, jchb5, jchb10;
     private autoUploadAction aua;
-    private BasicUploadSettingsPanel busp = new BasicUploadSettingsPanel();
+    BasicUploadSettingsPanel busp;
+    // APIDataSet apiData = new APIDataSet(Main.main.getCurrentDataSet());
+    // UploadedObjectsSummaryPanel uosp=new UploadedObjectsSummaryPanel();
 
     public String getComment() {
         return txfComment.getText();
@@ -52,7 +55,7 @@ public class autoUploadDialog extends ToggleDialog implements ActionListener {
     public String getSource() {
         return txfSource.getText();
     }
-   
+
     public autoUploadDialog() {
         super("Auto Uploading", "up", tr("Open Auto-Uploading."), Shortcut.registerShortcut("tool:autoUpload", tr("Toggle: {0}", tr("Auto Uploading")),
                 KeyEvent.VK_F, Shortcut.CTRL_SHIFT), 75);
@@ -72,43 +75,23 @@ public class autoUploadDialog extends ToggleDialog implements ActionListener {
 
         txfComment = new JTextField();
         txfComment.setText("Here's the comment of the uploading");
-
         txfSource = new JTextField();
         txfSource.setText("Here's the source of the uploading");
-       
+
         jchb1 = new JCheckBox(new AbstractAction() {
             {
                 putValue(NAME, tr("1 min."));
                 putValue(SHORT_DESCRIPTION, tr("Upload editions every 1 minutes."));
             }
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (jchb1.isSelected()) {
-                    aua = new autoUploadAction();
-                    aua.actionPerformed(e);
-                }
-
-            }
-        });
-
-        jchb5 = new JCheckBox(new AbstractAction() {
-
-            {
-                putValue(NAME, tr("5 min."));
-                putValue(SHORT_DESCRIPTION, tr("Upload editions every 5 minutes."));
-               
-            }
             private Set<IPrimitive> processedPrimitives = new HashSet<IPrimitive>();
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (jchb5.isSelected()) {
-                     busp.enviar(getComment(), getSource());
-                    APIDataSet apiData = new APIDataSet(Main.main.getCurrentDataSet());
-                    
+                if (jchb1.isSelected()) {
+
                     System.out.println("Esto son los datos en autouploaddialog:" + getComment() + getSource());
-                   
+
+                    APIDataSet apiData = new APIDataSet(Main.main.getCurrentDataSet());
                     Main.worker.execute(
                             new UploadPrimitivesTask(
                                     UploadDialog.getUploadDialog(getComment(), getSource()).getUploadStrategySpecification(),
@@ -122,6 +105,44 @@ public class autoUploadDialog extends ToggleDialog implements ActionListener {
             }
         });
 
+        jchb5 = new JCheckBox(new AbstractAction() {
+
+            {
+                putValue(NAME, tr("5 min."));
+                putValue(SHORT_DESCRIPTION, tr("Upload editions every 5 minutes."));
+
+            }
+            private Set<IPrimitive> processedPrimitives = new HashSet<IPrimitive>();
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (jchb5.isSelected()) {
+
+                    APIDataSet apiData = new APIDataSet(Main.main.getCurrentDataSet());
+
+                    txfComment.setText(apiData.getPrimitivesToAdd().size() + " objects was added, "
+                            + apiData.getPrimitivesToDelete().size() + " objects was deleted and "
+                            + apiData.getPrimitivesToUpdate().size() + " objects was updated.");
+
+                    String last_source = "";
+
+                    for (int i = 0; i < Main.map.mapView.getLayersOfType(ImageryLayer.class).size(); i++) {
+                        last_source = last_source + " " + (Main.map.mapView.getLayersOfType(ImageryLayer.class).get(i).getName());
+                    }
+                    txfSource.setText(last_source);
+
+                    Main.worker.execute(
+                            new UploadPrimitivesTask(
+                                    UploadDialog.getUploadDialog(getComment(), getSource()).getUploadStrategySpecification(),
+                                    Main.main.getEditLayer(),
+                                    apiData,
+                                    UploadDialog.getUploadDialog(getComment(), getSource()).getChangeset()
+                            )
+                    );
+                }
+            }
+        });
+
         jchb10 = new JCheckBox(new AbstractAction() {
             {
                 putValue(NAME, tr("10 min."));
@@ -130,9 +151,20 @@ public class autoUploadDialog extends ToggleDialog implements ActionListener {
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                aua = new autoUploadAction();
-                aua.actionPerformed(e);
+                if (jchb10.isSelected()) {
+                    System.out.println("");
+                    APIDataSet apiData = new APIDataSet(Main.main.getCurrentDataSet());
 
+                    Main.worker.execute(
+                            new UploadPrimitivesTask(
+                                    UploadDialog.getUploadDialog(getComment(), getSource()).getUploadStrategySpecification(),
+                                    Main.main.getEditLayer(),
+                                    apiData,
+                                    UploadDialog.getUploadDialog(getComment(), getSource()).getChangeset()
+                            )
+                    );
+
+                }
             }
 
         });

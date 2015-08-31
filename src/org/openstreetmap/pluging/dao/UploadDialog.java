@@ -18,6 +18,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -30,13 +31,13 @@ import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
-import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 
 import org.openstreetmap.josm.Main;
 import org.openstreetmap.josm.data.Preferences.PreferenceChangeEvent;
 import org.openstreetmap.josm.data.Preferences.PreferenceChangedListener;
 import org.openstreetmap.josm.data.Preferences.Setting;
+import org.openstreetmap.josm.data.Version;
 import org.openstreetmap.josm.data.osm.Changeset;
 import org.openstreetmap.josm.gui.SideButton;
 import org.openstreetmap.josm.gui.help.ContextSensitiveHelpAction;
@@ -63,28 +64,30 @@ public class UploadDialog extends JDialog implements PropertyChangeListener, Pre
     static private UploadDialog uploadDialog;
 
     static private final Collection<Component> customComponents = new ArrayList<Component>();
-    static private String jtfComment;
-    static private String jtfSource;
-    private static final BasicUploadSettingsPanel busp=new BasicUploadSettingsPanel();
+    static String jtfC;
+    static String jtfS;
 
+    // private static final BasicUploadSettingsPanel busp = new BasicUploadSettingsPanel();
     static public UploadDialog getUploadDialog(String jtfComment, String jtfSource) {
-        System.out.println("Esto se recibe en getuploaddialog:" + jtfComment + jtfSource);
-        busp.enviar(jtfComment, jtfSource);
+        jtfC = jtfComment;
+        jtfS = jtfSource;
+        //busp.enviar(jtfComment, jtfSource);
+        System.out.println("Esto se recibe en getuploaddialog:" + jtfComment + jtfC + jtfSource + jtfS);
+
         if (uploadDialog == null) {
             uploadDialog = new UploadDialog();
-            UploadDialog.jtfComment = jtfComment;
-            UploadDialog.jtfSource = jtfSource;
-            
-            System.out.println("Entonces se asigna el valor 1:" + UploadDialog.jtfComment + UploadDialog.jtfSource);
+            UploadDialog.jtfC = jtfComment;
+            UploadDialog.jtfS = jtfSource;
         }
-
-        UploadDialog.jtfComment = jtfComment;
-        UploadDialog.jtfSource = jtfSource;
-        System.out.println("Entonces se asigna el valor 2:" + UploadDialog.jtfComment + UploadDialog.jtfSource);
-
         return uploadDialog;
+
     }
 
+    public UploadDialog() {
+        super(JOptionPane.getFrameForComponent(Main.parent), ModalityType.DOCUMENT_MODAL);
+//        busp.enviar(jtfC, jtfS);
+        build();
+    }
     /**
      * the panel with the objects to upload
      */
@@ -126,15 +129,17 @@ public class UploadDialog extends JDialog implements PropertyChangeListener, Pre
             }
         };
 
-        tpConfigPanels.add(pnlBasicUploadSettings = new BasicUploadSettingsPanel(jtfComment, jtfSource, changesetCommentModel, changesetSourceModel));
+        System.out.println("Estas son las entradas importantes en uploaddialog:" + UploadDialog.jtfC + UploadDialog.jtfS + uploadDialog.jtfC + uploadDialog.jtfS);
+
+        tpConfigPanels.add(pnlBasicUploadSettings = new BasicUploadSettingsPanel(UploadDialog.jtfC, UploadDialog.jtfS, changesetCommentModel, changesetSourceModel));
         tpConfigPanels.setTitleAt(0, tr("Settings"));
         tpConfigPanels.setToolTipTextAt(0, tr("Decide how to upload the data and which changeset to use"));
 
         tpConfigPanels.add(pnlTagSettings = new TagSettingsPanel(changesetCommentModel, changesetSourceModel));
         tpConfigPanels.setTitleAt(1, tr("Tags of new changeset"));
         tpConfigPanels.setToolTipTextAt(1, tr("Apply tags to the changeset data is uploaded to"));
-        
-        System.out.println("Esto recibe basicuploadsettingpanel:" + jtfComment + jtfSource);
+
+        System.out.println("Esto recibe basicuploadsettingpanel:" + jtfC + jtfS);
         pnl.add(tpConfigPanels, GBC.eol().fill(GBC.HORIZONTAL));
         return pnl;
     }
@@ -208,11 +213,6 @@ public class UploadDialog extends JDialog implements PropertyChangeListener, Pre
     /**
      * constructor
      */
-    public UploadDialog() {
-        super(JOptionPane.getFrameForComponent(Main.parent), ModalityType.DOCUMENT_MODAL);
-        build();
-    }
-
     public void startUserInput() {
         tpConfigPanels.setSelectedIndex(0);
         pnlBasicUploadSettings.startUserInput();
@@ -221,23 +221,28 @@ public class UploadDialog extends JDialog implements PropertyChangeListener, Pre
         UploadParameterSummaryPanel pnl = pnlBasicUploadSettings.getUploadParameterSummaryPanel();
     }
 
+    //interesa solo el getchangeset
     public Changeset getChangeset() {
+
         Changeset cs = new Changeset();
-        cs.setKeys(pnlTagSettings.getDefaultTags());
+        cs.setKeys(getDefaultChangesetTags());
         return cs;
     }
 
     public Map<String, String> getDefaultChangesetTags() {
-        return pnlTagSettings.getDefaultTags();
-    }
+        Map<String, String> tags = new HashMap<String, String>();
+        try {
+            tags.put("comment", jtfC);
+            tags.put("source", jtfS);
+            String agent = Version.getInstance().getAgentString(false);
+            System.out.println("Este es el agente" + agent);
+            tags.put("created_by", agent);
+            return tags;
 
-    public void setDefaultChangesetTags(Map<String, String> tags) {
-        pnlTagSettings.setDefaultTags(tags);
-        for (Entry<String, String> entry : tags.entrySet()) {
-            if ("comment".equals(entry.getKey())) {
-                changesetCommentModel.setComment(entry.getValue());
-            }
+        } catch (Exception e) {
+
         }
+        return tags;
     }
 
     public UploadStrategySpecification getUploadStrategySpecification() {
@@ -247,14 +252,7 @@ public class UploadDialog extends JDialog implements PropertyChangeListener, Pre
         return spec;
     }
 
-    protected String getUploadComment() {
-        return changesetCommentModel.getComment();
-    }
-
-    protected String getUploadSource() {
-        return changesetSourceModel.getComment();
-    }
-
+  
     public boolean isCanceled() {
         return canceled;
     }
