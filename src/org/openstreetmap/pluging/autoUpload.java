@@ -1,9 +1,10 @@
-package org.openstreetmap.pluging.main;
+package org.openstreetmap.pluging;
 
-import org.openstreetmap.josm.gui.IconToggleButton;
+//import org.openstreetmap.josm.gui.IconToggleButton;
 import org.openstreetmap.josm.gui.MapFrame;
 import org.openstreetmap.josm.plugins.Plugin;
 import org.openstreetmap.josm.plugins.PluginInformation;
+
 
 /**
  *
@@ -11,7 +12,7 @@ import org.openstreetmap.josm.plugins.PluginInformation;
  */
 public class autoUpload extends Plugin {
 
-    private IconToggleButton btnIcon;
+    //private IconToggleButton btnIcon;
     protected static autoUploadDialog atUploadDialog;
 
     public autoUpload(PluginInformation info) {
