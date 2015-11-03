@@ -1,5 +1,4 @@
-// License: GPL. For details, see LICENSE file.
-package org.openstreetmap.pluging.dao;
+package org.openstreetmap.pluging;
 
 import static org.openstreetmap.josm.gui.help.HelpUtil.ht;
 import static org.openstreetmap.josm.tools.CheckParameterUtil.ensureParameterNotNull;
@@ -43,10 +42,6 @@ import org.openstreetmap.josm.io.OsmTransferException;
 import org.openstreetmap.josm.tools.ImageProvider;
 import org.xml.sax.SAXException;
 
-/**
- * The task for uploading a collection of primitives
- *
- */
 public class UploadPrimitivesTask extends AbstractUploadTask {
 
     private boolean uploadCanceled = false;
@@ -58,7 +53,6 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
     private Set<IPrimitive> processedPrimitives;
     private UploadStrategySpecification strategy;
 
-       
     public UploadPrimitivesTask(UploadStrategySpecification strategy, OsmDataLayer layer, APIDataSet toUpload, Changeset changeset) {
         super(tr("Uploading data for layer ''{0}''", layer.getName()), false /* don't ignore exceptions */);
         ensureParameterNotNull(layer, "layer");
@@ -69,7 +63,6 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
         this.changeset = changeset;
         this.strategy = strategy;
         this.processedPrimitives = new HashSet<IPrimitive>();
-       
     }
 
     protected MaxChangesetSizeExceededPolicy askMaxChangesetSizeExceedsPolicy() {
@@ -134,14 +127,11 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
                 return MaxChangesetSizeExceededPolicy.ABORT;
             case JOptionPane.CLOSED_OPTION:
                 return MaxChangesetSizeExceededPolicy.ABORT;
-        }
-        // should not happen
+        }       
         return null;
     }
 
-    protected void openNewChangeset() {
-        // make sure the current changeset is removed from the upload dialog.
-        //
+    protected void openNewChangeset() {        
         ChangesetCache.getInstance().update(changeset);
         Changeset newChangeSet = new Changeset();
         newChangeSet.setKeys(this.changeset.getKeys());
@@ -159,33 +149,21 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
         }
         switch (strategy.getPolicy()) {
             case ABORT:
-            // don't continue - finish() will send the user back to map editing
-                //
+             
                 return false;
             case FILL_ONE_CHANGESET_AND_RETURN_TO_UPLOAD_DIALOG:
-            // don't continue - finish() will send the user back to the upload dialog
-                //
+             
                 return false;
             case AUTOMATICALLY_OPEN_NEW_CHANGESETS:
-            // prepare the state of the task for a next iteration in uploading.
-                //
+            
                 openNewChangeset();
                 toUpload.removeProcessed(processedPrimitives);
                 return true;
         }
-        // should not happen
+         
         return false;
     }
 
-    /**
-     * Retries to recover the upload operation from an exception which was
-     * thrown because an uploaded primitive was already deleted on the server.
-     *
-     * @param e the exception throw by the API
-     * @param monitor a progress monitor
-     * @throws OsmTransferException thrown if we can't recover from the
-     * exception
-     */
     protected void recoverFromGoneOnServer(OsmApiPrimitiveGoneException e, ProgressMonitor monitor) throws OsmTransferException {
         if (!e.isKnownPrimitive()) {
             throw e;
@@ -195,7 +173,7 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
             throw e;
         }
         if (p.isDeleted()) {
-            // we tried to delete an already deleted primitive.
+             
             final String msg;
             final String displayName = p.getDisplayName(DefaultNameFormatter.getInstance());
             if (p instanceof Node) {
@@ -214,16 +192,11 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
             toUpload.removeProcessed(processedPrimitives);
             return;
         }
-        // exception was thrown because we tried to *update* an already deleted
-        // primitive. We can't resolve this automatically. Re-throw exception,
-        // a conflict is going to be created later.
         throw e;
     }
 
     protected void cleanupAfterUpload() {
-        // we always clean up the data, even in case of errors. It's possible the data was
-        // partially uploaded. Better run on EDT.
-        //
+
         Runnable r = new Runnable() {
             @Override
             public void run() {
@@ -244,7 +217,6 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
 
     @Override
     protected void realRun() throws SAXException, IOException {
-       
         try {
             uploadloop:
             while (true) {
@@ -254,17 +226,14 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
                         writer = new OsmServerWriter();
                     }
                     writer.uploadOsm(strategy, toUpload.getPrimitives(), changeset, getProgressMonitor().createSubTaskMonitor(1, false));
-                    
 
-                    
                     break;
                 } catch (OsmTransferCanceledException e) {
                     e.printStackTrace();
                     uploadCanceled = true;
                     break uploadloop;
                 } catch (OsmApiPrimitiveGoneException e) {
-                    // try to recover from  410 Gone
-                    //
+
                     recoverFromGoneOnServer(e, getProgressMonitor());
                 } catch (ChangesetClosedException e) {
                     processedPrimitives.addAll(writer.getProcessedPrimitives()); // OsmPrimitive in => OsmPrimitive out
@@ -273,13 +242,10 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
                         case UNSPECIFIED:
                             throw e;
                         case UPDATE_CHANGESET:
-                        
+
                             throw e;
                         case UPLOAD_DATA:
-                        // Most likely the changeset is full. Try to recover and continue
-                            // with a new changeset, but let the user decide first (see
-                            // recoverFromChangesetFullException)
-                            //
+
                             if (recoverFromChangesetFullException()) {
                                 continue;
                             }
@@ -295,8 +261,7 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
                     }
                 }
             }
-        // if required close the changeset
-            //
+
             if (strategy.isCloseChangesetAfterUpload() && changeset != null && !changeset.isNew() && changeset.isOpen()) {
                 OsmApi.getOsmApi().closeChangeset(changeset, progressMonitor.createSubTaskMonitor(0, false));
             }
@@ -319,18 +284,10 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
             return;
         }
 
-        // depending on the success of the upload operation and on the policy for
-        // multi changeset uploads this will sent the user back to the appropriate
-        // place in JOSM, either
-        // - to an error dialog
-        // - to the Upload Dialog
-        // - to map editing
         GuiHelper.runInEDT(new Runnable() {
             @Override
             public void run() {
-                // if the changeset is still open after this upload we want it to
-                // be selected on the next upload
-                //
+
                 ChangesetCache.getInstance().update(changeset);
                 if (changeset != null && changeset.isOpen()) {
                     UploadDialog.getUploadDialog().setSelectedChangesetForNextUpload(changeset);
@@ -348,7 +305,7 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
                         handleFailedUpload(lastException);
                         return;
                     }
-                    if (strategy.getPolicy() == null) /* do nothing if unknown policy */ {
+                    if (strategy.getPolicy() == null) {
                         return;
                     }
                     if (e.getSource().equals(ChangesetClosedException.Source.UPLOAD_DATA)) {
@@ -360,8 +317,7 @@ public class UploadPrimitivesTask extends AbstractUploadTask {
                                 break; /* do nothing - we return to map editing */
 
                             case FILL_ONE_CHANGESET_AND_RETURN_TO_UPLOAD_DIALOG:
-                            // return to the upload dialog
-                                //
+
                                 toUpload.removeProcessed(processedPrimitives);
                                 UploadDialog.getUploadDialog().setUploadedPrimitives(toUpload);
                                 UploadDialog.getUploadDialog().setVisible(true);

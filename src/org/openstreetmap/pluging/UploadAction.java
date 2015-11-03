@@ -1,15 +1,11 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-package org.openstreetmap.pluging.dao;
 
-import org.openstreetmap.josm.actions.*;
+package org.openstreetmap.pluging;
+
 import static org.openstreetmap.josm.gui.help.HelpUtil.ht;
 import static org.openstreetmap.josm.tools.I18n.tr;
 
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -17,6 +13,7 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import org.openstreetmap.josm.Main;
+import org.openstreetmap.josm.actions.JosmAction;
 import org.openstreetmap.josm.actions.upload.ApiPreconditionCheckerHook;
 import org.openstreetmap.josm.actions.upload.DiscardTagsHook;
 import org.openstreetmap.josm.actions.upload.FixDataHook;
@@ -32,58 +29,26 @@ import org.openstreetmap.josm.gui.io.UploadPrimitivesTask;
 import org.openstreetmap.josm.gui.layer.OsmDataLayer;
 import org.openstreetmap.josm.gui.util.GuiHelper;
 import org.openstreetmap.josm.tools.ImageProvider;
-/**
- *
- * @author samely
- */
-//UploadAction
-public class autoUploadAction extends JosmAction{
-  
+import org.openstreetmap.josm.tools.Shortcut;
+
+public class UploadAction extends JosmAction{
+    
     private static final List<UploadHook> uploadHooks = new LinkedList<UploadHook>();
     private static final List<UploadHook> lateUploadHooks = new LinkedList<UploadHook>();
-    
     static {
-       
+        
         uploadHooks.add(new ValidateUploadHook());
-
-        /**
-         * Fixes database errors
-         */
         uploadHooks.add(new FixDataHook());
-
-        /**
-         * Checks server capabilities before upload.
-         */
-        uploadHooks.add(new ApiPreconditionCheckerHook());
-
-        /**
-         * Adjusts the upload order of new relations
-         */
+        uploadHooks.add(new ApiPreconditionCheckerHook());        
         uploadHooks.add(new RelationUploadOrderHook());
-
-        /**
-         * Removes discardable tags like created_by on modified objects
-         */
         lateUploadHooks.add(new DiscardTagsHook());
     }
 
-    /**
-     * Registers an upload hook. Adds the hook at the first position of the upload hooks.
-     *
-     * @param hook the upload hook. Ignored if null.
-     */
+    
     public static void registerUploadHook(UploadHook hook) {
         registerUploadHook(hook, false);
     }
 
-    /**
-     * Registers an upload hook. Adds the hook at the first position of the upload hooks.
-     *
-     * @param hook the upload hook. Ignored if null.
-     * @param late true, if the hook should be executed after the upload dialog
-     * has been confirmed. Late upload hooks should in general succeed and not
-     * abort the upload.
-     */
     public static void registerUploadHook(UploadHook hook, boolean late) {
         if(hook == null) return;
         if (late) {
@@ -97,11 +62,7 @@ public class autoUploadAction extends JosmAction{
         }
     }
 
-    /**
-     * Unregisters an upload hook. Removes the hook from the list of upload hooks.
-     *
-     * @param hook the upload hook. Ignored if null.
-     */
+    
     public static void unregisterUploadHook(UploadHook hook) {
         if(hook == null) return;
         if (uploadHooks.contains(hook)) {
@@ -112,15 +73,12 @@ public class autoUploadAction extends JosmAction{
         }
     }
 
-    public autoUploadAction() {
-        super(tr("Upload data"), "upload", tr("Upload all changes in the active data layer to the OSM server"),null, true);
+    public UploadAction() {
+        super(tr("Upload data"), "upload", tr("Upload all changes in the active data layer to the OSM server"),
+                Shortcut.registerShortcut("file:upload", tr("File: {0}", tr("Upload data")), KeyEvent.VK_UP, Shortcut.CTRL_SHIFT), true);
         putValue("help", ht("/Action/Upload"));
     }
 
-    /**
-     * Refreshes the enabled state
-     *
-     */
     @Override
     protected void updateEnabledState() {
         setEnabled(getEditLayer() != null);
@@ -157,15 +115,7 @@ public class autoUploadAction extends JosmAction{
                 ImageProvider.get("upload"), tr("Ignore this hint and upload anyway"));
     }
 
-    /**
-     * Check whether the preconditions are met to upload data in <code>apiData</code>.
-     * Makes sure upload is allowed, primitives in <code>apiData</code> don't participate in conflicts and
-     * runs the installed {@link UploadHook}s.
-     *
-     * @param layer the source layer of the data to be uploaded
-     * @param apiData the data to be uploaded
-     * @return true, if the preconditions are met; false, otherwise
-     */
+    
     public boolean checkPreUploadConditions(OsmDataLayer layer, APIDataSet apiData) {
         if (layer.isUploadDiscouraged()) {
             if (warnUploadDiscouraged(layer)) {
@@ -177,9 +127,7 @@ public class autoUploadAction extends JosmAction{
             alertUnresolvedConflicts(layer);
             return false;
         }
-        // Call all upload hooks in sequence.
-        // FIXME: this should become an asynchronous task
-        //
+       
         for (UploadHook hook : uploadHooks) {
             if (!hook.checkUpload(apiData))
                 return false;
@@ -188,13 +136,8 @@ public class autoUploadAction extends JosmAction{
         return true;
     }
 
-    /**
-     * Uploads data to the OSM API.
-     *
-     * @param layer the source layer for the data to upload
-     * @param apiData the primitives to be added, updated, or deleted
-     */
-     public void uploadData(final OsmDataLayer layer, APIDataSet apiData) {
+   
+    public void uploadData(final OsmDataLayer layer, APIDataSet apiData) {
         if (apiData.isEmpty()) {
             JOptionPane.showMessageDialog(
                     Main.parent,
@@ -213,7 +156,6 @@ public class autoUploadAction extends JosmAction{
             @Override
             public void run() {
                 dialog.setDefaultChangesetTags(layer.data.getChangeSetTags());
-                
             }
         });
         dialog.setUploadedPrimitives(apiData);
@@ -235,6 +177,9 @@ public class autoUploadAction extends JosmAction{
                         UploadDialog.getUploadDialog().getChangeset()
                 )
         );
+        
+        PleaseWaitProgressMonitor monitor=new PleaseWaitProgressMonitor();
+       
     }
 
     @Override
@@ -250,11 +195,7 @@ public class autoUploadAction extends JosmAction{
             );
             return;
         }
-        
-        
         APIDataSet apiData = new APIDataSet(Main.main.getCurrentDataSet());
-        uploadData(Main.main.getEditLayer(), apiData);      
-       
+        uploadData(Main.main.getEditLayer(), apiData);
     }
-    
 }

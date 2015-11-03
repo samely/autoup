@@ -11,10 +11,10 @@
 ** Call "ant help" to get possible build targets.
 **
 -->
-<project name="autoUpload" default="dist" basedir=".">
+<project name="secondPlugin" default="dist" basedir=".">
 
     <!-- enter the SVN commit message -->
-    <property name="commit.message" value="Auto Upload Plugin"/>
+    <property name="commit.message" value="Second Plugin"/>
     <!-- enter the *lowest* JOSM version this plugin is currently compatible with -->
     <property name="plugin.main.version" value="7001"/>
 
@@ -22,8 +22,8 @@
          See http://josm.openstreetmap.de/wiki/DevelopersGuide/DevelopingPlugins
     -->
     <property name="plugin.author" value="samely"/>
-    <property name="plugin.class" value="org.openstreetmap.pluging.main.autoUpload"/>
-    <property name="plugin.description" value="Upload the layers every 5 minutes."/>
+    <property name="plugin.class" value="org.openstreetmap.pluging.Second"/>
+    <property name="plugin.description" value="Upload in back"/>
     <property name="plugin.icon" value="images/up.png"/>
     <!--<property name="plugin.link" value=""/>-->
     <!--<property name="plugin.early" value="..."/>-->
